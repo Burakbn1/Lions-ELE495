@@ -1,0 +1,54 @@
+import jetson.inference
+import jetson.utils
+import cv2
+import numpy as np
+import serial
+import time
+net = jetson.inference.detectNet("ssd-mobilenet-v2", threshold=0.5)
+ser = serial.Serial('/dev/ttyUSB0', 9600)
+serb= serial.Serial('/dev/ttyTHS1',9600)
+time.sleep(2)
+cap = cv2.VideoCapture(0)
+cap.set(3, 640)  # Genişlik
+cap.set(4, 480)  # Yükseklik
+fruit_counts = {'apple': 0, 'carrot': 0, 'banana': 0, 'orange': 0, 'broccoli': 0}
+detection_done = False
+
+while True:
+    success, img = cap.read()
+    if success and not detection_done:       
+        imgCuda = jetson.utils.cudaFromNumpy(img)
+        detections = net.Detect(imgCuda)
+        if detections:
+            detection_done = True  # Algılama yapıldı, bayrağı güncelle            
+            for detection in detections:
+                className = net.GetClassDesc(detection.ClassID)
+                if className in fruit_counts:
+                    fruit_counts[className] += 1            
+            print("Detected fruits:")
+            for fruit, count in fruit_counts.items():
+                print(f"{fruit}: {count}")                
+                serb.write(f"{fruit}: {count}\n".encode('utf-8'))
+
+                fruit_counts = {'apple': 0, 'carrot': 0, 'banana': 0, 'orange': 0, 'broccoli': 0}               
+            img = jetson.utils.cudaToNumpy(imgCuda)        
+   
+    cv2.imshow("Image", img)
+    cv2.waitKey(1)
+
+    try:
+        while detection_done:       
+            if ser.in_waiting > 0 and detection_done==True:
+                gelen_deger = ser.readline().decode('utf-8').rstrip()
+                if gelen_deger== "False":
+                    gelen_deger = "True"
+                    detection_done= False
+                print(f"Received from Arduino: {detection_done}")        
+            else:
+                time.sleep(5)
+
+    except KeyboardInterrupt:
+        ser.close()
+        print("Serial connection closed.")
+cap.release()
+cv2.destroyAllWindows()
