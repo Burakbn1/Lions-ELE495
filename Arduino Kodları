@@ -1,0 +1,73 @@
+const int stepPin = 5; 
+const int dirPin = 6; 
+const int enPin = 8;
+const int trigPin = 2; // Trig pinini D2'ye bağla
+const int echoPin = 3; // Echo pinini D3'e bağla
+
+String flag="True";
+float mesafeOlc();
+void step_motor_hareket_fonksiyon();
+void step_motor_durdur_fonksiyon();
+uint8_t step_motor_bit=0;
+float mesafe;
+
+void setup() {
+  pinMode(stepPin,OUTPUT);  
+  pinMode(dirPin,OUTPUT);
+  pinMode(enPin,OUTPUT);
+  digitalWrite(enPin,LOW);
+  Serial.begin(9600); // Seri iletişimi başlat
+  pinMode(trigPin, OUTPUT); // Trig pinini çıkış olarak ayarla
+  pinMode(echoPin, INPUT); // Echo pinini giriş olarak ayarla
+}
+void loop() {
+   mesafe = mesafeOlc();
+   step_motor_hareket_fonksiyon();
+  
+   if((mesafe<27)){
+    step_motor_durdur_fonksiyon(); 
+    flag="True";
+    step_motor_hareket_fonksiyon_2();
+    }  
+}
+void step_motor_durdur_fonksiyon(){
+
+  for(int x = 0; x < 800; x++) {
+    digitalWrite(enPin,LOW);
+  }
+  flag="False";
+  Serial.println(flag);
+  delay(5000)
+}
+void step_motor_hareket_fonksiyon_2(){
+digitalWrite(dirPin,LOW); // Enables the motor to move in a particular direction
+  for(int x = 0; x < 2000; x++) {
+    digitalWrite(stepPin,HIGH); 
+    delayMicroseconds(500); 
+    digitalWrite(stepPin,LOW); 
+    delayMicroseconds(500); 
+  }
+  }
+void step_motor_hareket_fonksiyon(){
+digitalWrite(dirPin,LOW); // Enables the motor to move in a particular direction
+  for(int x = 0; x < 800; x++) {
+    digitalWrite(stepPin,HIGH); 
+    delayMicroseconds(500); 
+    digitalWrite(stepPin,LOW); 
+    delayMicroseconds(500); 
+  }  
+  }
+float mesafeOlc() {
+  // Ultrasonik mesafe sensörüyle mesafeyi ölç
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  // Echo pininden gelen süreyi mikrosaniye cinsinden ölç
+  unsigned long sure = pulseIn(echoPin, HIGH);
+  // Mesafeyi hesapla (ses hızı 340 m/s olduğu için 2 ile bölünmüştür)
+  float mesafe = sure * 0.034 / 2;
+
+  return mesafe;
+}
